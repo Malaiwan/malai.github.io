@@ -1,0 +1,253 @@
+---
+title: "สถานการณ์ Covid-19 ปี 2020"
+author: "Malaiwan Kaewarsa"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+  runtime: shiny
+---
+
+<link rel="preconnect" href="https://fonts.gstatic.com"> 
+<link href="https://fonts.googleapis.com/css2?family=Krub&family=Sarabun:wght@100&display=swap" rel="stylesheet">
+<style type="text/css">
+body{ /* Normal  */
+      font-size: 16px;
+        font-family: 'Krub', sans-serif;
+      color: #1B2631;
+      line-height: 1.7em;
+  }
+td {  /* Table  */
+  font-size: 8px;
+}
+h1.title {
+  font-size: 38px;
+  color: #154360;
+}
+h1 { /* Header 1 */
+  font-size: 28px;
+  color: #154360;
+}
+h2 { /* Header 2 */
+    font-size: 22px;
+  color: #154360;
+}
+h3 { /* Header 3 */
+  font-size: 20px;
+  font-family: 'Sarabun', sans-serif;  
+  color: #154360;
+}
+code.r{ /* Code block */
+    font-size: 12px;
+}
+pre { /* Code block - determines code spacing between lines */
+    font-size: 14px;
+}
+</style>
+
+```{r global, include=FALSE}
+library(flexdashboard)
+library(tidyr)
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(dygraphs)
+library(forcats)
+library(leaflet)
+library(ggExtra)
+library(GGally)
+dat<-read.csv("finalexam.csv")
+
+
+```
+
+Overview
+====================================
+row
+--------------------------
+### จำนวนประเทศทั้งหมด
+
+```{r,echo=FALSE}
+valueBox(414,icon="fa-bicycle",color = ("info"))
+```
+
+### ค่าเฉลี่ยจำนวนผู้ป่วยที่ได้รับการยืนยันว่าติด Covid-19
+
+```{r}
+#summary(dat$confirmed_case)
+valueBox(94553,icon="fa-motorcycle",color = ("blue"))
+```
+
+### ค่าเฉลี่ยจำนวนผู้ป่วยที่ได้รับการยืนยันว่าเสียชีวิตจาก Covid-19
+
+```{r}
+#summary(dat$confirmed_deaths)
+valueBox(2926,icon="fa-car",color = ("danger"))
+```
+
+row
+--------------------------
+
+### ดัชนีความเข้มงวดของมาตรการการควบคุมโรค
+
+```{r}
+gauge(4.958,min = 1,max = 10,gaugeSectors(success = c(7,10),warning = c(4,6),danger = c(1,3)))
+```
+
+### ดัชนี containment and health index
+
+```{r}
+gauge(4.952,min = 1,max = 10,gaugeSectors(success = c(7,10),warning = c(4,6),danger = c(1,3)))
+```
+
+
+### ดัชนีการสนับสนุน/ช่วยเหลือทางด้านเศรษฐกิจแก่ประชาชน
+
+```{r}
+gauge(3.785,min = 1,max = 10,gaugeSectors(success = c(7,10),warning = c(4,6),danger = c(1,3)))
+```
+
+row
+--------------------------
+
+### กราฟเส้นแสดงจำนวนผู้ป่วย, ผู้เสียชีวิต,และผู้เข้ารับการรักษาในโรงพยาบาลสะสมในแต่ละเดือน
+
+```{r}
+cases_cu<-dat%>%
+	select(date,cases_cumulative)%>%
+	filter(!is.na(cases_cumulative))%>%
+	separate(col="date",into=c("year","month","day"),sep="-")%>%
+	select(-c("year"))%>%
+	group_by(month)%>%
+	summarise(sum=sum(cases_cumulative))%>%ts
+deaths_cu<-dat%>%
+	select(date,deaths_cumulative)%>%
+	filter(!is.na(deaths_cumulative))%>%
+	separate(col="date",into=c("year","month","day"),sep="-")%>%
+	select(-c("year"))%>%
+	group_by(month)%>%
+	summarise(sum=sum(deaths_cumulative))%>%ts
+hospitalized_cu<-dat%>%
+	select(date,hospitalized_cumulative)%>%
+	filter(!is.na(hospitalized_cumulative))%>%
+	separate(col="date",into=c("year","month","day"),sep="-")%>%
+	select(-c("year"))%>%
+	group_by(month)%>%
+	summarise(sum=sum(hospitalized_cumulative))%>%ts
+lungDeaths <- cbind(cases_cu,deaths_cu)
+dygraph(lungDeaths)
+
+```
+
+second
+====================================
+
+Column {data-width=200 .sidebar}
+------------------------------------
+
+```{r }
+head(mtcars)
+str(mtcars) 
+
+
+# classic plot :
+p <- ggplot(mtcars, aes(x=wt, y=mpg, color=cyl, size=cyl)) +
+      geom_point() +
+      theme(legend.position="none")
+ 
+# Set relative size of marginal plots (main plot 10x bigger than marginals)
+p1 <- ggMarginal(p, type="histogram", size=10)
+ 
+# Custom marginal plots:
+p2 <- ggMarginal(p, type="histogram", fill = "slateblue", xparams = list(  bins=10))
+ 
+# Show only marginal plot for x axis
+p3 <- ggMarginal(p, margins = 'x', color="purple", size=4)
+```
+Row {data-heigth=400}
+------------------------------------
+
+```{r}
+
+
+```
+
+first
+====================================
+
+column
+------------------------------------
+### 6
+
+```{r }
+support<-select(dat,income_support,cases_cumulative)
+plot(support, pch = 20)
+grid()
+```
+
+New {data-navmenu=Details}
+================================
+
+column
+-------------------------------
+
+### กราฟเส้นแสดงจำนวนผู้ป่วย, ผู้เสียชีวิต, ผู้เข้ารับรักษาในโรงบาล รายใหม่
+
+```{r}
+cases_new<-dat%>%
+	select(date,cases_new)%>%
+	filter(!is.na(cases_new))%>%
+	separate(col="date",into=c("year","month","day"),sep="-")%>%
+	select(-c("year"))%>%
+	group_by(month)%>%
+	summarise(sum=sum(cases_new))%>%ts
+deaths_new<-dat%>%
+	select(date,deaths_new)%>%
+	filter(!is.na(deaths_new))%>%
+	separate(col="date",into=c("year","month","day"),sep="-")%>%
+	select(-c("year"))%>%
+	group_by(month)%>%
+	summarise(sum=sum(deaths_new))%>%ts
+hospitalized_new<-dat%>%
+	select(date,hospitalized_new)%>%
+	filter(!is.na(hospitalized_new))%>%
+	separate(col="date",into=c("year","month","day"),sep="-")%>%
+	select(-c("year"))%>%
+	group_by(month)%>%
+	summarise(sum=sum(hospitalized_new))%>%ts
+lungDeaths <- cbind(cases_new,deaths_new,hospitalized_new)
+dygraph(lungDeaths)
+
+```
+
+
+Cumulative {data-navmenu=Details}
+================================
+
+### กราฟเส้นแสดงจำนวนผู้ป่วย, ผู้เสียชีวิต, ผู้เข้ารับรักษาในโรงพยาบาลสะสม
+
+```{r}
+cases_cu<-dat%>%
+	select(date,cases_cumulative)%>%
+	filter(!is.na(cases_cumulative))%>%
+	separate(col="date",into=c("year","month","day"),sep="-")%>%
+	select(-c("year"))%>%
+	group_by(month)%>%
+	summarise(sum=sum(cases_cumulative))%>%ts
+deaths_cu<-dat%>%
+	select(date,deaths_cumulative)%>%
+	filter(!is.na(deaths_cumulative))%>%
+	separate(col="date",into=c("year","month","day"),sep="-")%>%
+	select(-c("year"))%>%
+	group_by(month)%>%
+	summarise(sum=sum(deaths_cumulative))%>%ts
+hospitalized_cu<-dat%>%
+	select(date,hospitalized_cumulative)%>%
+	filter(!is.na(hospitalized_cumulative))%>%
+	separate(col="date",into=c("year","month","day"),sep="-")%>%
+	select(-c("year"))%>%
+	group_by(month)%>%
+	summarise(sum=sum(hospitalized_cumulative))%>%ts
+lungDeaths <- cbind(cases_cu,deaths_cu,hospitalized_cu)
+dygraph(lungDeaths)
+
+```
